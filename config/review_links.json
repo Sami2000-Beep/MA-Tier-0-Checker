@@ -1,0 +1,12 @@
+{
+  "VirusTotal": "https://www.virustotal.com/gui/search/{url}",
+  "Norton Safe Web": "https://safeweb.norton.com/report/show?url={url}",
+  "AbuseIPDB": "https://www.abuseipdb.com/check/{domain}",
+  "Cisco Talos": "https://talosintelligence.com/reputation_center/lookup?search={domain}",
+  "WOT": "https://www.mywot.com/scorecard/{domain}",
+  "ScamAdviser": "https://www.scamadviser.com/check-website/{domain}",
+  "URLVoid": "https://www.urlvoid.com/scan/{domain}/",
+  "SimilarWeb": "https://www.similarweb.com/website/{domain}/",
+  "Google News": "https://news.google.com/search?q={domain}",
+  "Wikipedia Search": "https://en.wikipedia.org/w/index.php?search={domain}"
+}

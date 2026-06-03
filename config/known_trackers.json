@@ -1,0 +1,9 @@
+{
+  "Google Analytics": ["google-analytics.com", "googletagmanager.com", "gtag/js"],
+  "Google Ads/DoubleClick": ["doubleclick.net", "googlesyndication.com", "googleadservices.com"],
+  "Meta Pixel": ["connect.facebook.net", "facebook.net/tr", "fbq("],
+  "Microsoft Clarity": ["clarity.ms", "clarity("],
+  "Adobe Analytics": ["omniture.com", "adobedtm.com", "assets.adobedtm.com"],
+  "Hotjar": ["hotjar.com", "static.hotjar.com"],
+  "Matomo": ["matomo", "piwik"]
+}

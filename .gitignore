@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Secrets and local settings
+.env
+.env.*
+!.env.example
+.streamlit/secrets.toml
+
+# Build/test artifacts
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# App output artifacts
+outputs/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.vscode/
