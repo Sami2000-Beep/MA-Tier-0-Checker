@@ -571,18 +571,23 @@ with st.sidebar:
 
     env_vt_api_key = get_secret_or_env("VT_API_KEY")
 
-    vt_key = st.text_input(
-        "VirusTotal API Key",
-        value=env_vt_api_key,
+    vt_override_key = st.text_input(
+        "VirusTotal API Key (optional override)",
+        value="",
         type="password",
         help=(
-            "Loaded from .env if VT_API_KEY is set. You may also paste a key "
-            "here for this session. Do not hard-code your real API key into app.py."
+            "The app will use VT_API_KEY from .env or Streamlit secrets by default. "
+            "Use this field only for a temporary session override."
         ),
     ).strip()
 
+    vt_key = vt_override_key or env_vt_api_key
+
     if use_vt and vt_key:
-        st.success(f"VirusTotal API key loaded. Length: {len(vt_key)} characters.")
+        if vt_override_key:
+            st.success("VirusTotal key loaded from temporary session override.")
+        else:
+            st.success("VirusTotal key loaded from environment/secrets.")
     elif use_vt and not vt_key:
         st.warning(
             "VirusTotal API key not loaded. Add VT_API_KEY to your .env file "
