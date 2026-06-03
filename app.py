@@ -198,31 +198,17 @@ def run_assessment(raw_url: str, vt_key: str, use_vt: bool) -> dict:
 
 
 def build_default_origin_text(assessment: dict) -> str:
-    rdap = assessment.get("rdap", {})
     parent = assessment.get("parent_company", {})
 
-    rdap_text = (
-        "RDAP / Domain Registration Draft:\n"
-        f"- RDAP status: {rdap.get('status', 'Unknown')}\n"
-        f"- Registrar: {rdap.get('registrar', '')}\n"
-        f"- Country: {rdap.get('country', '')}\n"
-        f"- Source: {rdap.get('source', '')}\n"
-        f"- Notes: {rdap.get('notes', '')}"
-    )
+    possible_owner = parent.get("possible_owner") or "Unable to determine"
+    possible_location = parent.get("possible_location") or "Unable to determine"
+    confidence = parent.get("confidence") or "Low"
 
-    parent_text = (
-        "\n\nParent Company / Ownership Draft:\n"
-        f"- Status: {parent.get('status', 'Unknown')}\n"
-        f"- Possible owner/legal entity: {parent.get('possible_owner', '')}\n"
-        f"- Possible location: {parent.get('possible_location', '')}\n"
-        f"- Possible country/jurisdiction: {parent.get('possible_country', '')}\n"
-        f"- FVEY assessment: {parent.get('fvey_assessment', 'Unknown')}\n"
-        f"- Confidence: {parent.get('confidence', 'Low')}\n"
-        f"- Evidence source: {parent.get('evidence_source', '')}\n"
-        f"- Notes: {parent.get('notes', '')}"
+    return (
+        f"Possible Owner: {possible_owner}\n"
+        f"Possible Location: {possible_location}\n"
+        f"Confidence: {confidence}"
     )
-
-    return rdap_text + parent_text
 
 
 def build_default_vulnerability_text(assessment: dict) -> str:
@@ -541,6 +527,26 @@ def build_batch_review_row(
         "comments": comments,
         "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
     }
+
+
+def get_batch_saved_value(
+    reviewed_rows: dict,
+    current_index: int,
+    column_name: str,
+    fallback: str = "",
+) -> str:
+    """
+    Returns a previously saved value for the current batch URL if it exists.
+    This prevents reviewed values from disappearing when the analyst navigates
+    away from a URL and comes back later.
+    """
+    saved_row = reviewed_rows.get(current_index, {})
+    value = saved_row.get(column_name, fallback)
+
+    if value is None:
+        return fallback
+
+    return str(value)
 
 
 # ------------------------------------------------------------
@@ -1051,15 +1057,11 @@ with batch_tab:
         reset_batch_btn = st.button("Reset Batch Review")
 
     if reset_batch_btn:
-        for key in [
-            "batch_assessments",
-            "batch_review_index",
-            "batch_reviewed_rows",
-            "batch_source_filename",
-        ]:
-            if key in st.session_state:
+        for key in list(st.session_state.keys()):
+            if key.startswith("batch_"):
                 del st.session_state[key]
         st.success("Batch review state cleared.")
+        st.rerun()
 
     if run_batch_btn:
         if uploaded is None:
@@ -1092,7 +1094,9 @@ with batch_tab:
 
                         for i, (_, input_row) in enumerate(batch_df.iterrows(), start=1):
                             raw_url_value = str(input_row[url_column]).strip()
-                            status_box.write(f"Checking {i} of {len(batch_df)}: {raw_url_value}")
+                            status_box.write(
+                                f"Checking {i} of {len(batch_df)}: {raw_url_value}"
+                            )
 
                             assessment = run_assessment(
                                 raw_url=raw_url_value,
@@ -1156,7 +1160,7 @@ with batch_tab:
         nav_col1, nav_col2, nav_col3 = st.columns(3)
 
         with nav_col1:
-            if st.button("Previous URL", disabled=current_index == 0):
+            if st.button("Previous URL", disabled=current_index == 0, key=f"{key_prefix}_prev"):
                 st.session_state["batch_review_index"] = current_index - 1
                 st.rerun()
 
@@ -1170,7 +1174,7 @@ with batch_tab:
                     f"{'✅ ' if i in batch_reviewed_rows else '⬜ '}"
                     f"{batch_assessments[i]['assessment'].get('url', '')}"
                 ),
-                key="batch_jump_select",
+                key=f"batch_jump_select_{current_index}",
             )
 
             if selected_display != current_index:
@@ -1178,7 +1182,7 @@ with batch_tab:
                 st.rerun()
 
         with nav_col3:
-            if st.button("Next URL", disabled=current_index >= total - 1):
+            if st.button("Next URL", disabled=current_index >= total - 1, key=f"{key_prefix}_next"):
                 st.session_state["batch_review_index"] = current_index + 1
                 st.rerun()
 
@@ -1201,6 +1205,17 @@ with batch_tab:
             "**Meta Description:**",
             assessment.get("metadata", {}).get("description") or "Not found",
         )
+
+        parent = assessment.get("parent_company", {})
+        st.write(
+            "**Parent Company / Ownership Draft:**",
+            parent.get("possible_owner") or "Manual review required",
+        )
+        st.write(
+            "**Parent Location Draft:**",
+            parent.get("possible_location") or "Manual review required",
+        )
+
         st.write(
             "**Automated Recommendation Suggestion:**",
             assessment.get("recommendation", {}).get("recommendation", "Needs Review"),
@@ -1230,22 +1245,37 @@ with batch_tab:
         with site_col1:
             site_number_value = st.text_input(
                 "Site #",
-                value=current_item.get("site_number", ""),
+                value=get_batch_saved_value(
+                    batch_reviewed_rows,
+                    current_index,
+                    "Site #",
+                    current_item.get("site_number", ""),
+                ),
                 key=f"{key_prefix}_site_number",
             )
 
             manual_title_value = st.text_input(
                 "Site Title override",
-                value=current_item.get("manual_title", "")
-                or assessment.get("metadata", {}).get("title", ""),
+                value=get_batch_saved_value(
+                    batch_reviewed_rows,
+                    current_index,
+                    "Site Title",
+                    current_item.get("manual_title", "")
+                    or assessment.get("metadata", {}).get("title", ""),
+                ),
                 key=f"{key_prefix}_manual_title",
             )
 
         with site_col2:
             manual_blurb_value = st.text_area(
                 "Blurb/Description override",
-                value=current_item.get("manual_blurb", "")
-                or assessment.get("metadata", {}).get("description", ""),
+                value=get_batch_saved_value(
+                    batch_reviewed_rows,
+                    current_index,
+                    "Blurb/Description",
+                    current_item.get("manual_blurb", "")
+                    or assessment.get("metadata", {}).get("description", ""),
+                ),
                 height=100,
                 key=f"{key_prefix}_manual_blurb",
             )
@@ -1257,15 +1287,25 @@ with batch_tab:
 
             st.text_area(
                 "Origin (FVEY?)",
-                value=build_default_origin_text(assessment),
+                value=get_batch_saved_value(
+                    batch_reviewed_rows,
+                    current_index,
+                    "Origin (FVEY?)",
+                    build_default_origin_text(assessment),
+                ),
                 key=f"{key_prefix}_origin",
                 height=130,
             )
 
             st.text_area(
                 "Malware/Spyware",
-                value=assessment.get("virustotal", {}).get(
-                    "notes", "Manual review required."
+                value=get_batch_saved_value(
+                    batch_reviewed_rows,
+                    current_index,
+                    "Malware/Spyware",
+                    assessment.get("virustotal", {}).get(
+                        "notes", "Manual review required."
+                    ),
                 ),
                 key=f"{key_prefix}_malware",
                 height=130,
@@ -1273,14 +1313,24 @@ with batch_tab:
 
             st.text_area(
                 "Tracking",
-                value=assessment.get("tracking", {}).get("notes", ""),
+                value=get_batch_saved_value(
+                    batch_reviewed_rows,
+                    current_index,
+                    "Tracking",
+                    assessment.get("tracking", {}).get("notes", ""),
+                ),
                 key=f"{key_prefix}_tracking",
                 height=110,
             )
 
             st.text_area(
                 "Vulnerability",
-                value=build_default_vulnerability_text(assessment),
+                value=get_batch_saved_value(
+                    batch_reviewed_rows,
+                    current_index,
+                    "Vulnerability",
+                    build_default_vulnerability_text(assessment),
+                ),
                 key=f"{key_prefix}_vulnerability",
                 height=130,
             )
@@ -1325,10 +1375,25 @@ with batch_tab:
                 disabled=True,
             )
 
+            saved_content = get_batch_saved_value(
+                batch_reviewed_rows,
+                current_index,
+                "Content Association",
+                "",
+            )
+
+            default_ca_index = 2
+            if "Content Association: Low Risk" in saved_content:
+                default_ca_index = 0
+            elif "Content Association: Concern Found" in saved_content:
+                default_ca_index = 1
+            elif "Content Association: Not Accessible" in saved_content:
+                default_ca_index = 3
+
             ca_finding = st.selectbox(
                 "Content Association Finding",
                 ["Low Risk", "Concern Found", "Needs Review", "Not Accessible"],
-                index=2,
+                index=default_ca_index,
                 key=f"{key_prefix}_content_association_finding",
             )
 
@@ -1465,6 +1530,16 @@ with batch_tab:
             "recommendation", {}
         ).get("recommendation", "Needs Review")
 
+        saved_recommendation = get_batch_saved_value(
+            batch_reviewed_rows,
+            current_index,
+            "Final Recommendation",
+            "",
+        )
+
+        if saved_recommendation in recommendation_options:
+            suggested_rec = saved_recommendation
+
         if suggested_rec not in recommendation_options:
             suggested_rec = "Needs Review"
 
@@ -1477,7 +1552,12 @@ with batch_tab:
 
         comments = st.text_area(
             "Comments",
-            value=assessment.get("recommendation", {}).get("reason", ""),
+            value=get_batch_saved_value(
+                batch_reviewed_rows,
+                current_index,
+                "Comments",
+                assessment.get("recommendation", {}).get("reason", ""),
+            ),
             height=100,
             key=f"{key_prefix}_comments",
         )
@@ -1528,13 +1608,39 @@ with batch_tab:
                 st.rerun()
 
         st.markdown("---")
-        st.markdown("### Export Reviewed Batch")
+        st.markdown("### Completed URL Reviews")
 
         reviewed_rows_dict = st.session_state.get("batch_reviewed_rows", {})
         reviewed_rows = [
             reviewed_rows_dict[i]
             for i in sorted(reviewed_rows_dict.keys())
         ]
+
+        if reviewed_rows:
+            completed_summary = []
+
+            for i in sorted(reviewed_rows_dict.keys()):
+                row = reviewed_rows_dict[i]
+                completed_summary.append(
+                    {
+                        "#": i + 1,
+                        "Site #": row.get("Site #", ""),
+                        "URL": row.get("URL", ""),
+                        "Final Recommendation": row.get("Final Recommendation", ""),
+                        "Reviewed": "Yes",
+                    }
+                )
+
+            st.dataframe(
+                pd.DataFrame(completed_summary),
+                use_container_width=True,
+                hide_index=True,
+            )
+        else:
+            st.caption("No URLs have been finalized yet.")
+
+        st.markdown("---")
+        st.markdown("### Export Reviewed Batch")
 
         st.write(f"Reviewed rows ready to export: **{len(reviewed_rows)} of {total}**")
 
@@ -1612,7 +1718,6 @@ with batch_tab:
                 pd.DataFrame(reviewed_rows, columns=COLUMNS),
                 use_container_width=True,
             )
-
 
 # ------------------------------------------------------------
 # About / SOP Mapping
