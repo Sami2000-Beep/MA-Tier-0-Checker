@@ -76,3 +76,31 @@ outputs/
 ## Notes for NIPR use
 
 The app is designed so checks can fail gracefully. If a source is blocked or unavailable, the row should show `Needs Review` or allow analyst notes rather than breaking the workflow.
+
+## Publish and deploy
+
+### Publish code to GitHub
+
+This project is already configured as a Git repository. To push new changes later:
+
+```powershell
+git add .
+git commit -m "Describe your change"
+git push
+```
+
+### Deploy on Streamlit Community Cloud
+
+1. Go to `https://share.streamlit.io` and sign in with GitHub.
+2. Click **New app** and select this repository.
+3. Set the main file path to `app.py`.
+4. In app settings, add a secret named `VT_API_KEY`.
+5. Deploy.
+
+For Streamlit secrets, use this format:
+
+```toml
+VT_API_KEY = "your_key_here"
+```
+
+Do not commit real API keys into this repository.
