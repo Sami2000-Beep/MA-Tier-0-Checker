@@ -1,3 +1,4 @@
+import hmac
 import json
 import os
 from datetime import datetime
@@ -551,9 +552,41 @@ def get_batch_saved_value(
     return str(value)
 
 
+def require_app_password() -> None:
+    """
+    Blocks app access unless APP_ACCESS_PASSWORD is provided and entered correctly.
+    If APP_ACCESS_PASSWORD is not configured, the app remains open.
+    """
+    configured_password = get_secret_or_env("APP_ACCESS_PASSWORD")
+
+    if not configured_password:
+        return
+
+    if st.session_state.get("is_authenticated", False):
+        return
+
+    st.title("MA Tier 0 Risk Assessment Assistant")
+    st.warning("This app is password protected.")
+
+    with st.form("app_login_form"):
+        entered_password = st.text_input("App Password", type="password")
+        submitted = st.form_submit_button("Unlock App")
+
+    if submitted:
+        if hmac.compare_digest(entered_password, configured_password):
+            st.session_state["is_authenticated"] = True
+            st.rerun()
+        else:
+            st.error("Incorrect password. Please try again.")
+
+    st.stop()
+
+
 # ------------------------------------------------------------
 # Sidebar
 # ------------------------------------------------------------
+
+require_app_password()
 
 st.title("MA Tier 0 Risk Assessment Assistant")
 st.caption(
@@ -562,6 +595,10 @@ st.caption(
 
 with st.sidebar:
     st.header("Settings")
+
+    if get_secret_or_env("APP_ACCESS_PASSWORD") and st.button("Log Out"):
+        st.session_state["is_authenticated"] = False
+        st.rerun()
 
     evaluator = st.selectbox(
         "Evaluator / Approver",
