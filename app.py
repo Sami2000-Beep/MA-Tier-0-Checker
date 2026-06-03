@@ -325,7 +325,7 @@ def format_guided_review_result(
     reviewed = ", ".join(reviewed_links) if reviewed_links else "No links selected"
 
     if not notes or not notes.strip():
-        notes = "No additional analyst notes entered."
+        notes = "None entered."
 
     return (
         f"{category}: {finding}. "
@@ -380,9 +380,11 @@ def guided_review_panel(
 
     notes = st.text_area(
         f"{title} Notes",
-        value=notes_default,
+        value="",
         height=120,
         key=f"{session_key_prefix}_notes",
+        help=notes_default,
+        placeholder="Enter analyst notes here, if needed.",
     )
 
     result = format_guided_review_result(
@@ -563,7 +565,7 @@ with st.sidebar:
 
     evaluator = st.selectbox(
         "Evaluator / Approver",
-        ["BH", "AP", "RL", "PC"],
+        ["B", "A", "R", "P"],
         index=0,
     )
 
@@ -763,7 +765,7 @@ with single_tab:
             st.markdown("#### Content Association")
             st.caption(
                 "Purpose: Determine whether association with this website could create "
-                "reputational, legal, counterintelligence, or policy concerns."
+                "reputational, legal, or policy concerns."
             )
 
             content_link_names = [
@@ -810,12 +812,14 @@ with single_tab:
 
             ca_notes = st.text_area(
                 "Content Association Analyst Notes",
-                value=(
-                    "Review the automated metadata draft and validate with the linked sources. "
-                    "Document any reputational, legal, CI, or policy concerns."
-                ),
+                value="",
                 height=120,
                 key="content_association_notes",
+                help=(
+                    "Review the automated metadata draft and validate with the linked sources. "
+                    "Document any reputational, legal, or policy concerns."
+                ),
+                placeholder="Enter analyst notes here, if needed.",
             )
 
             st.session_state["content_association"] = format_guided_review_result(
@@ -1344,7 +1348,7 @@ with batch_tab:
             st.markdown("#### Content Association")
             st.caption(
                 "Purpose: Determine whether association with this website could create "
-                "reputational, legal, counterintelligence, or policy concerns."
+                "reputational, legal, or policy concerns."
             )
 
             content_link_names = [
@@ -1406,12 +1410,14 @@ with batch_tab:
 
             ca_notes = st.text_area(
                 "Content Association Analyst Notes",
-                value=(
-                    "Review the automated metadata draft and validate with the linked sources. "
-                    "Document any reputational, legal, CI, or policy concerns."
-                ),
+                value="",
                 height=120,
                 key=f"{key_prefix}_content_association_notes",
+                help=(
+                    "Review the automated metadata draft and validate with the linked sources. "
+                    "Document any reputational, legal, or policy concerns."
+                ),
+                placeholder="Enter analyst notes here, if needed.",
             )
 
             st.session_state[f"{key_prefix}_content_association"] = format_guided_review_result(
